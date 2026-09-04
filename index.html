@@ -98,7 +98,7 @@
     }
 
     /* Input Fields */
-    input[type="text"], input[type="number"] {
+    input[type="text"], input[type="number"], input[type="password"] {
       width: 100%;
       padding: 10px 12px;
       background: #161b22;
@@ -168,6 +168,11 @@
       <div class="color-dot" style="background: #9c27b0;" onclick="setTheme('#9c27b0')"></div>
     </div>
 
+    <!-- MetaApi Credentials -->
+    <div class="section-title">MetaApi Setup</div>
+    <input type="password" id="apiToken" placeholder="MetaApi Token">
+    <input type="text" id="accountId" value="7be75ccb-d11b-4826-9d88-0" placeholder="Account ID">
+
     <!-- Custom Avatar Image Link -->
     <div class="section-title">Background Avatar Image URL</div>
     <input type="text" id="avatarInput" placeholder="Paste image link..." onchange="changeAvatar(this.value)">
@@ -180,60 +185,71 @@
 
     <!-- Trigger Execution Buttons -->
     <div class="btn-grid">
-      <button class="btn btn-buy" onclick="sendTrade('BUY')">BUY</button>
-      <button class="btn btn-sell" onclick="sendTrade('SELL')">SELL</button>
+      <button class="btn btn-buy" onclick="sendTrade('ORDER_TYPE_BUY')">BUY</button>
+      <button class="btn btn-sell" onclick="sendTrade('ORDER_TYPE_SELL')">SELL</button>
     </div>
 
     <div class="status-box" id="statusBox">Ready to trade</div>
   </div>
 
   <script>
-    // Theme color switcher
     function setTheme(color) {
       document.documentElement.style.setProperty('--accent-color', color);
     }
 
-    // Avatar image updater
     function changeAvatar(url) {
       if (url.trim() !== '') {
         document.getElementById('appAvatar').src = url;
       }
     }
 
-    // Send order signal to your Render backend
     async function sendTrade(action) {
       const statusBox = document.getElementById('statusBox');
+      const token = document.getElementById('apiToken').value;
+      const accountId = document.getElementById('accountId').value;
       const lot = document.getElementById('lotSize').value;
       const sl = document.getElementById('slPrice').value;
       const tp = document.getElementById('tpPrice').value;
 
-      statusBox.innerText = `Sending ${action} order...`;
+      if (!token || !accountId) {
+        statusBox.innerText = 'Error: Enter MetaApi Token & Account ID';
+        statusBox.style.color = '#dc3545';
+        return;
+      }
+
+      statusBox.innerText = `Sending ${action === 'ORDER_TYPE_BUY' ? 'BUY' : 'SELL'} order...`;
+      statusBox.style.color = '#8b949e';
+
+      const tradePayload = {
+        actionType: action,
+        symbol: 'XAUUSD',
+        volume: parseFloat(lot)
+      };
+
+      if (sl) tradePayload.stopLoss = parseFloat(sl);
+      if (tp) tradePayload.takeProfit = parseFloat(tp);
 
       try {
-        // Replace this URL with your Render backend URL once deployed
-        const response = await fetch('YOUR_RENDER_BACKEND_URL/api/trade', {
+        const response = await fetch(`https://mt-client-api-v1.agium.metaapi.cloud/users/current/accounts/${accountId}/trade`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: action,
-            symbol: 'XAUUSD',
-            volume: parseFloat(lot),
-            stopLoss: sl ? parseFloat(sl) : null,
-            takeProfit: tp ? parseFloat(tp) : null
-          })
+          headers: {
+            'auth-token': token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(tradePayload)
         });
 
         const data = await response.json();
 
-        if (data.success) {
-          statusBox.innerText = `Trade Placed! Ticket: #${data.orderId}`;
+        if (response.ok) {
+          statusBox.innerText = `Trade Placed! Ticket: #${data.numericCode || data.stringCode || 'Success'}`;
           statusBox.style.color = '#28a745';
         } else {
-          statusBox.innerText = `Error: ${data.error}`;
+          statusBox.innerText = `Error: ${data.message || 'Execution failed'}`;
           statusBox.style.color = '#dc3545';
         }
       } catch (err) {
-        statusBox.innerText = 'Server connection failed';
+        statusBox.innerText = 'Connection failed. Check API details.';
         statusBox.style.color = '#dc3545';
       }
     }
