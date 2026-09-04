@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MFS 2.0 Trading Dashboard</title>
+  <style>
+    :root {
+      --accent-color: #ff003c;
+      --bg-color: #0d0f12;
+      --card-bg: rgba(22, 27, 34, 0.85);
+      --text-color: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 400px;
+      background: var(--card-bg);
+      border-radius: 20px;
+      padding: 20px;
+      border: 2px solid var(--accent-color);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+    }
+
+    /* Avatar Banner */
+    .avatar-wrapper {
+      position: relative;
+      width: 100%;
+      height: 180px;
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .avatar-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .avatar-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0,0,0,0.8));
+      padding: 10px;
+    }
+
+    h2 {
+      font-size: 1.3rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Theme Color Selector */
+    .section-title {
+      font-size: 0.85rem;
+      color: #8b949e;
+      margin: 14px 0 8px 0;
+      text-transform: uppercase;
+    }
+
+    .theme-picker {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .color-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      transition: transform 0.2s ease;
+    }
+
+    .color-dot:active {
+      transform: scale(1.15);
+    }
+
+    /* Input Fields */
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      background: #161b22;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: white;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
+    }
+
+    /* Action Buttons */
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .btn {
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-weight: bold;
+      color: white;
+      cursor: pointer;
+      text-transform: uppercase;
+      font-size: 0.9rem;
+    }
+
+    .btn-buy {
+      background-color: #28a745;
+    }
+
+    .btn-sell {
+      background-color: #dc3545;
+    }
+
+    .status-box {
+      margin-top: 14px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      text-align: center;
+      color: #8b949e;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Avatar Background Card -->
+    <div class="avatar-wrapper">
+      <img id="appAvatar" src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80" alt="App Avatar">
+      <div class="avatar-overlay">
+        <h2>MFS 2.0</h2>
+      </div>
+    </div>
+
+    <!-- Theme Selection Options -->
+    <div class="section-title">Theme Accent</div>
+    <div class="theme-picker">
+      <div class="color-dot" style="background: #ff003c;" onclick="setTheme('#ff003c')"></div>
+      <div class="color-dot" style="background: #007bff;" onclick="setTheme('#007bff')"></div>
+      <div class="color-dot" style="background: #28a745;" onclick="setTheme('#28a745')"></div>
+      <div class="color-dot" style="background: #ffc107;" onclick="setTheme('#ffc107')"></div>
+      <div class="color-dot" style="background: #9c27b0;" onclick="setTheme('#9c27b0')"></div>
+    </div>
+
+    <!-- Custom Avatar Image Link -->
+    <div class="section-title">Background Avatar Image URL</div>
+    <input type="text" id="avatarInput" placeholder="Paste image link..." onchange="changeAvatar(this.value)">
+
+    <!-- Trade Input Controls -->
+    <div class="section-title">Trade Setup (XAU/USD)</div>
+    <input type="number" id="lotSize" value="0.01" step="0.01" placeholder="Lot Size">
+    <input type="number" id="slPrice" placeholder="Stop Loss (SL)">
+    <input type="number" id="tpPrice" placeholder="Take Profit (TP)">
+
+    <!-- Trigger Execution Buttons -->
+    <div class="btn-grid">
+      <button class="btn btn-buy" onclick="sendTrade('BUY')">BUY</button>
+      <button class="btn btn-sell" onclick="sendTrade('SELL')">SELL</button>
+    </div>
+
+    <div class="status-box" id="statusBox">Ready to trade</div>
+  </div>
+
+  <script>
+    // Theme color switcher
+    function setTheme(color) {
+      document.documentElement.style.setProperty('--accent-color', color);
+    }
+
+    // Avatar image updater
+    function changeAvatar(url) {
+      if (url.trim() !== '') {
+        document.getElementById('appAvatar').src = url;
+      }
+    }
+
+    // Send order signal to your Render backend
+    async function sendTrade(action) {
+      const statusBox = document.getElementById('statusBox');
+      const lot = document.getElementById('lotSize').value;
+      const sl = document.getElementById('slPrice').value;
+      const tp = document.getElementById('tpPrice').value;
+
+      statusBox.innerText = `Sending ${action} order...`;
+
+      try {
+        // Replace this URL with your Render backend URL once deployed
+        const response = await fetch('YOUR_RENDER_BACKEND_URL/api/trade', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: action,
+            symbol: 'XAUUSD',
+            volume: parseFloat(lot),
+            stopLoss: sl ? parseFloat(sl) : null,
+            takeProfit: tp ? parseFloat(tp) : null
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          statusBox.innerText = `Trade Placed! Ticket: #${data.orderId}`;
+          statusBox.style.color = '#28a745';
+        } else {
+          statusBox.innerText = `Error: ${data.error}`;
+          statusBox.style.color = '#dc3545';
+        }
+      } catch (err) {
+        statusBox.innerText = 'Server connection failed';
+        statusBox.style.color = '#dc3545';
+      }
+    }
+  </script>
+</body>
+</html>
